@@ -1,20 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
+import { problem } from './data/twoSum'
 import './App.css'
-
-const problem = {
-  title: 'Two Sum',
-  description: `Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
-
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
-
-You can return the answer in any order.`,
-}
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 function App() {
+  const [code, setCode] = useState(problem.starterCode)
   const [transcript, setTranscript] = useState('')
+  const [activeTab, setActiveTab] = useState('code')
   const [isRecording, setIsRecording] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -62,6 +56,7 @@ function App() {
   const startRecording = () => {
     setError(null)
     setFeedback(null)
+    setActiveTab('explain')
     sessionBaseRef.current = transcript ? `${transcript} ` : ''
     try {
       recognitionRef.current?.start()
@@ -79,6 +74,7 @@ function App() {
   const handleAnalyze = async () => {
     if (!transcript.trim()) {
       setError('Please record or type your explanation first.')
+      setActiveTab('explain')
       return
     }
 
@@ -87,8 +83,12 @@ function App() {
     setFeedback(null)
 
     try {
-      const { data } = await axios.post(`${API_URL}/analyze`, { transcript })
+      const { data } = await axios.post(`${API_URL}/analyze`, {
+        transcript,
+        code,
+      })
       setFeedback(data)
+      setActiveTab('feedback')
     } catch (err) {
       const message =
         err.response?.data?.error ||
@@ -102,112 +102,231 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <h1>CodeSpeak</h1>
-        <p className="tagline">AI Interview Communication Coach</p>
+      <header className="topbar">
+        <div className="topbar-left">
+          <span className="logo">CodeSpeak</span>
+          <span className="topbar-divider" />
+          <span className="problem-nav">
+            {problem.id}. {problem.title}
+          </span>
+        </div>
+        <button
+          className="btn-analyze-top"
+          onClick={handleAnalyze}
+          disabled={isAnalyzing || !transcript.trim()}
+        >
+          {isAnalyzing ? 'Analyzing…' : 'Analyze Interview'}
+        </button>
       </header>
 
-      <main className="main">
-        <section className="card problem-card">
-          <h2>Problem: {problem.title}</h2>
-          <p className="problem-description">{problem.description}</p>
-          <p className="hint">
-            Explain your solution as if you are in a technical interview.
-          </p>
-        </section>
-
-        <section className="card recording-card">
-          <div className="recording-controls">
-            {!isRecording ? (
-              <button
-                className="btn btn-record"
-                onClick={startRecording}
-                disabled={!speechSupported}
-              >
-                🎤 Start Explanation
-              </button>
-            ) : (
-              <button className="btn btn-stop" onClick={stopRecording}>
-                ⏹ Stop Recording
-              </button>
-            )}
-            {isRecording && (
-              <span className="recording-indicator">
-                <span className="pulse" />
-                Recording...
+      <div className="workspace">
+        <aside className="problem-panel">
+          <div className="problem-header">
+            <h1>{problem.title}</h1>
+            <div className="problem-meta">
+              <span className={`difficulty difficulty-${problem.difficulty.toLowerCase()}`}>
+                {problem.difficulty}
               </span>
+              {problem.topics.map((topic) => (
+                <span key={topic} className="topic-tag">
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="problem-body">
+            <p className="problem-text">{problem.description}</p>
+            {problem.details.map((line, i) => (
+              <p key={i} className="problem-text">
+                {line}
+              </p>
+            ))}
+
+            {problem.examples.map((ex, i) => (
+              <div key={i} className="example-block">
+                <p className="example-title">Example {i + 1}:</p>
+                <pre className="example-code">
+                  <strong>Input:</strong> {ex.input}
+                  {'\n'}
+                  <strong>Output:</strong> {ex.output}
+                  {ex.explanation && (
+                    <>
+                      {'\n'}
+                      <strong>Explanation:</strong> {ex.explanation}
+                    </>
+                  )}
+                </pre>
+              </div>
+            ))}
+
+            <div className="constraints-block">
+              <p className="section-title">Constraints:</p>
+              <ul>
+                {problem.constraints.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </aside>
+
+        <main className="editor-panel">
+          <div className="panel-tabs">
+            <button
+              className={`tab ${activeTab === 'code' ? 'tab-active' : ''}`}
+              onClick={() => setActiveTab('code')}
+            >
+              Code
+            </button>
+            <button
+              className={`tab ${activeTab === 'explain' ? 'tab-active' : ''}`}
+              onClick={() => setActiveTab('explain')}
+            >
+              Explanation
+              {isRecording && <span className="tab-recording-dot" />}
+            </button>
+            {feedback && (
+              <button
+                className={`tab ${activeTab === 'feedback' ? 'tab-active' : ''}`}
+                onClick={() => setActiveTab('feedback')}
+              >
+                Feedback
+              </button>
             )}
           </div>
 
-          {!speechSupported && (
-            <p className="warning">
-              Speech recognition is not supported in this browser. Type your
-              explanation below instead.
-            </p>
+          <div className="panel-content">
+            {activeTab === 'code' && (
+              <div className="code-pane">
+                <div className="code-toolbar">
+                  <span className="lang-label">Python3</span>
+                  <button
+                    className="btn-text"
+                    onClick={() => setCode(problem.starterCode)}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <textarea
+                  className="code-editor"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  spellCheck={false}
+                />
+              </div>
+            )}
+
+            {activeTab === 'explain' && (
+              <div className="explain-pane">
+                <div className="explain-toolbar">
+                  {!isRecording ? (
+                    <button
+                      className="btn-record"
+                      onClick={startRecording}
+                      disabled={!speechSupported}
+                    >
+                      <MicIcon />
+                      Start Explanation
+                    </button>
+                  ) : (
+                    <button className="btn-stop" onClick={stopRecording}>
+                      <StopIcon />
+                      Stop Recording
+                    </button>
+                  )}
+                  {isRecording && (
+                    <span className="recording-badge">
+                      <span className="pulse" />
+                      Listening…
+                    </span>
+                  )}
+                </div>
+
+                {!speechSupported && (
+                  <p className="warning">
+                    Speech recognition isn&apos;t supported in this browser. Type
+                    your explanation below.
+                  </p>
+                )}
+
+                <p className="explain-hint">
+                  Walk through your approach out loud — brute force, optimization,
+                  complexity, and how your code works.
+                </p>
+
+                <textarea
+                  className="transcript-editor"
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  placeholder="Click Start Explanation and speak, or type your approach here…"
+                />
+              </div>
+            )}
+
+            {activeTab === 'feedback' && feedback && (
+              <div className="feedback-pane">
+                <div
+                  className={`verdict ${feedback.passed ? 'verdict-pass' : 'verdict-fail'}`}
+                >
+                  {feedback.passed ? '✓ You passed!' : 'Keep practicing'}
+                </div>
+
+                <div className="score-row">
+                  <span className="score-label">Communication Score</span>
+                  <span className="score-value">{feedback.score}/10</span>
+                </div>
+
+                {feedback.strengths?.length > 0 && (
+                  <div className="feedback-block">
+                    <h3>Strengths</h3>
+                    <ul className="strengths">
+                      {feedback.strengths.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {feedback.improvements?.length > 0 && (
+                  <div className="feedback-block">
+                    <h3>Improvements</h3>
+                    <ul className="improvements">
+                      {feedback.improvements.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div className="error-banner">
+              {error}
+            </div>
           )}
-
-          <label htmlFor="transcript" className="transcript-label">
-            Your Explanation:
-          </label>
-          <textarea
-            id="transcript"
-            className="transcript"
-            value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
-            placeholder="Click Start Explanation and speak, or type your approach here..."
-            rows={6}
-          />
-
-          <button
-            className="btn btn-analyze"
-            onClick={handleAnalyze}
-            disabled={isAnalyzing || !transcript.trim()}
-          >
-            {isAnalyzing ? 'Analyzing...' : 'Analyze'}
-          </button>
-        </section>
-
-        {error && (
-          <section className="card error-card">
-            <p>{error}</p>
-          </section>
-        )}
-
-        {feedback && (
-          <section className="card feedback-card">
-            <h2>AI Interview Feedback</h2>
-            <div className={`verdict ${feedback.passed ? 'verdict-pass' : 'verdict-fail'}`}>
-              {feedback.passed ? '✓ You passed!' : 'Keep practicing'}
-            </div>
-            <div className="score">
-              Score: <strong>{feedback.score}/10</strong>
-            </div>
-
-            {feedback.strengths?.length > 0 && (
-              <div className="feedback-section">
-                <h3>Strengths</h3>
-                <ul className="strengths">
-                  {feedback.strengths.map((item, i) => (
-                    <li key={i}>✓ {item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {feedback.improvements?.length > 0 && (
-              <div className="feedback-section">
-                <h3>Improvements</h3>
-                <ul className="improvements">
-                  {feedback.improvements.map((item, i) => (
-                    <li key={i}>− {item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </section>
-        )}
-      </main>
+        </main>
+      </div>
     </div>
+  )
+}
+
+function MicIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+    </svg>
+  )
+}
+
+function StopIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
   )
 }
 

@@ -38,6 +38,7 @@ Evaluate:
 4. Did they discuss time complexity?
 5. Did they discuss space complexity?
 6. How clear is their communication?
+7. If code was provided, does their explanation align with their implementation?
 
 Return a JSON object with exactly these fields:
 - score: integer from 1 to 10
@@ -52,6 +53,7 @@ Return ONLY valid JSON, no markdown."""
 def analyze():
     data = request.get_json()
     transcript = (data or {}).get("transcript", "").strip()
+    code = (data or {}).get("code", "").strip()
 
     if not transcript:
         return jsonify({"error": "Transcript is required"}), 400
@@ -60,6 +62,14 @@ def analyze():
         return jsonify({"error": "OPENAI_API_KEY is not configured"}), 500
 
     client = get_client()
+
+    code_section = ""
+    if code:
+        code_section = f"\n\nCandidate's code:\n```\n{code}\n```"
+
+    prompt = EVALUATION_PROMPT.format(
+        transcript=transcript + code_section
+    )
 
     try:
         response = client.chat.completions.create(
@@ -74,7 +84,7 @@ def analyze():
                 },
                 {
                     "role": "user",
-                    "content": EVALUATION_PROMPT.format(transcript=transcript),
+                    "content": prompt,
                 },
             ],
             response_format={"type": "json_object"},

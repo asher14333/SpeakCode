@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
 import { problem } from './data/twoSum'
+import { handleEditorKeyDown } from './utils/editorKeys'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
@@ -16,6 +17,7 @@ function App() {
   const [speechSupported, setSpeechSupported] = useState(true)
   const recognitionRef = useRef(null)
   const sessionBaseRef = useRef('')
+  const codeEditorRef = useRef(null)
 
   useEffect(() => {
     const SpeechRecognition =
@@ -104,7 +106,7 @@ function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-left">
-          <span className="logo">CodeSpeak</span>
+          <span className="logo">SpeakCode</span>
           <span className="topbar-divider" />
           <span className="problem-nav">
             {problem.id}. {problem.title}
@@ -197,28 +199,30 @@ function App() {
           </div>
 
           <div className="panel-content">
-            {activeTab === 'code' && (
-              <div className="code-pane">
-                <div className="code-toolbar">
-                  <span className="lang-label">Python3</span>
-                  <button
-                    className="btn-text"
-                    onClick={() => setCode(problem.starterCode)}
-                  >
-                    Reset
-                  </button>
-                </div>
-                <textarea
-                  className="code-editor"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  spellCheck={false}
-                />
+            <div className={`code-pane ${activeTab !== 'code' ? 'pane-hidden' : ''}`}>
+              <div className="code-toolbar">
+                <span className="lang-label">Python3</span>
+                <button
+                  className="btn-text"
+                  onClick={() => setCode(problem.starterCode)}
+                >
+                  Reset
+                </button>
               </div>
-            )}
+              <textarea
+                ref={codeEditorRef}
+                className="code-editor"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => handleEditorKeyDown(e, code, setCode)}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+                autoCorrect="off"
+              />
+            </div>
 
-            {activeTab === 'explain' && (
-              <div className="explain-pane">
+            <div className={`explain-pane ${activeTab !== 'explain' ? 'pane-hidden' : ''}`}>
                 <div className="explain-toolbar">
                   {!isRecording ? (
                     <button
@@ -261,11 +265,11 @@ function App() {
                   onChange={(e) => setTranscript(e.target.value)}
                   placeholder="Click Start Explanation and speak, or type your approach here…"
                 />
-              </div>
-            )}
+            </div>
 
-            {activeTab === 'feedback' && feedback && (
-              <div className="feedback-pane">
+            <div className={`feedback-pane ${activeTab !== 'feedback' || !feedback ? 'pane-hidden' : ''}`}>
+              {feedback && (
+                <>
                 <div
                   className={`verdict ${feedback.passed ? 'verdict-pass' : 'verdict-fail'}`}
                 >
@@ -298,8 +302,9 @@ function App() {
                     </ul>
                   </div>
                 )}
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
 
           {error && (

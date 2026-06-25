@@ -1,4 +1,4 @@
-# CodeSpeak
+# SpeakCode
 
 Voice-first AI coding interview coach. Practice explaining LeetCode solutions out loud and get feedback on your communication — not just your code.
 

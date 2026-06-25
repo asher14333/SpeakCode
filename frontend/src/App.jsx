@@ -74,6 +74,11 @@ function App() {
   }
 
   const handleAnalyze = async () => {
+    if (isRecording) {
+      setError('Stop your explanation before analyzing.')
+      return
+    }
+
     if (!transcript.trim()) {
       setError('Please record or type your explanation first.')
       setActiveTab('explain')
@@ -112,13 +117,36 @@ function App() {
             {problem.id}. {problem.title}
           </span>
         </div>
-        <button
-          className="btn-analyze-top"
-          onClick={handleAnalyze}
-          disabled={isAnalyzing || !transcript.trim()}
-        >
-          {isAnalyzing ? 'Analyzing…' : 'Analyze Interview'}
-        </button>
+        <div className="topbar-actions">
+          {!isRecording ? (
+            <button
+              className="btn-record-top"
+              onClick={startRecording}
+              disabled={!speechSupported}
+            >
+              <MicIcon />
+              Start Explanation
+            </button>
+          ) : (
+            <button className="btn-stop-top" onClick={stopRecording}>
+              <StopIcon />
+              Stop Explanation
+            </button>
+          )}
+          {isRecording && (
+            <span className="recording-badge-top">
+              <span className="pulse" />
+              Listening…
+            </span>
+          )}
+          <button
+            className="btn-analyze-top"
+            onClick={handleAnalyze}
+            disabled={isAnalyzing || isRecording || !transcript.trim()}
+          >
+            {isAnalyzing ? 'Analyzing…' : 'Analyze Interview'}
+          </button>
+        </div>
       </header>
 
       <div className="workspace">
@@ -223,48 +251,20 @@ function App() {
             </div>
 
             <div className={`explain-pane ${activeTab !== 'explain' ? 'pane-hidden' : ''}`}>
-                <div className="explain-toolbar">
-                  {!isRecording ? (
-                    <button
-                      className="btn-record"
-                      onClick={startRecording}
-                      disabled={!speechSupported}
-                    >
-                      <MicIcon />
-                      Start Explanation
-                    </button>
-                  ) : (
-                    <button className="btn-stop" onClick={stopRecording}>
-                      <StopIcon />
-                      Stop Recording
-                    </button>
-                  )}
-                  {isRecording && (
-                    <span className="recording-badge">
-                      <span className="pulse" />
-                      Listening…
-                    </span>
-                  )}
-                </div>
-
-                {!speechSupported && (
-                  <p className="warning">
-                    Speech recognition isn&apos;t supported in this browser. Type
-                    your explanation below.
-                  </p>
-                )}
-
-                <p className="explain-hint">
-                  Walk through your approach out loud — brute force, optimization,
-                  complexity, and how your code works.
+              {!speechSupported && (
+                <p className="warning">
+                  Speech recognition isn&apos;t supported in this browser. Type
+                  your explanation below.
                 </p>
+              )}
 
-                <textarea
-                  className="transcript-editor"
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  placeholder="Click Start Explanation and speak, or type your approach here…"
-                />
+              <textarea
+                className="transcript-editor"
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                readOnly={isRecording}
+                placeholder="Your explanation will appear here when you start speaking…"
+              />
             </div>
 
             <div className={`feedback-pane ${activeTab !== 'feedback' || !feedback ? 'pane-hidden' : ''}`}>

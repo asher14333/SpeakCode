@@ -325,12 +325,14 @@
 
 .code-pane,
 .explain-pane,
-.feedback-pane {
+.feedback-pane,
+.interview-pane-wrapper {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 .pane-hidden {
@@ -556,6 +558,14 @@
   transition: width 0.3s ease;
 }
 
+.rubric-bar-empty {
+  background: #ff375f;
+}
+
+.rubric-bar-full {
+  background: #2cbb5d;
+}
+
 .rubric-quote,
 .feedback-quote {
   margin: 6px 0 0;
@@ -580,13 +590,13 @@
 }
 
 /* ── Interview panel ── */
-.interview-pane-wrapper,
 .feedback-pane {
   overflow-y: auto;
 }
 
 .interview-pane {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -637,18 +647,22 @@
 }
 
 .interview-chat {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
 .interview-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  scroll-behavior: smooth;
 }
 
 .interview-msg {

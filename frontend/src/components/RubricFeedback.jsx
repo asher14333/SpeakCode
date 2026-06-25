@@ -1,11 +1,20 @@
 import { RUBRIC_LABELS } from '../data/problems'
 
+const RUBRIC_ORDER = [
+  'problemUnderstanding',
+  'bruteForce',
+  'optimization',
+  'timeComplexity',
+  'spaceComplexity',
+  'clarity',
+]
+
 export default function RubricFeedback({ feedback }) {
   if (!feedback) return null
 
-  const rubricEntries = feedback.rubric
-    ? Object.entries(feedback.rubric)
-    : []
+  const rubricEntries = RUBRIC_ORDER.filter((key) => feedback.rubric?.[key]).map(
+    (key) => [key, feedback.rubric[key]]
+  )
 
   return (
     <div className="feedback-pane-inner">
@@ -36,7 +45,7 @@ export default function RubricFeedback({ feedback }) {
                 </div>
                 <div className="rubric-bar">
                   <div
-                    className="rubric-bar-fill"
+                    className={`rubric-bar-fill ${item.score >= item.max ? 'rubric-bar-full' : item.score === 0 ? 'rubric-bar-empty' : ''}`}
                     style={{ width: `${(item.score / item.max) * 100}%` }}
                   />
                 </div>

@@ -20,6 +20,18 @@ export default function InterviewPanel({
 
   const recognitionRef = useRef(null)
   const sessionBaseRef = useRef('')
+  const messagesEndRef = useRef(null)
+  const messagesContainerRef = useRef(null)
+
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 120
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [history, complete, overallNote])
 
   useEffect(() => {
     const SpeechRecognition =
@@ -184,7 +196,7 @@ export default function InterviewPanel({
         </div>
       ) : (
         <div className="interview-chat">
-          <div className="interview-messages">
+          <div className="interview-messages" ref={messagesContainerRef}>
             {history.map((msg, i) => (
               <div key={i} className={`interview-msg interview-msg-${msg.role}`}>
                 {msg.role === 'interviewer' && (
@@ -220,6 +232,7 @@ export default function InterviewPanel({
                 <p>{overallNote}</p>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           {awaitingAnswer && (

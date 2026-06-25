@@ -11,6 +11,7 @@ from prompts import (
     build_analyze_prompt,
     build_interview_prompt,
     build_interview_start_prompt,
+    normalize_feedback,
 )
 from runner import run_code
 
@@ -78,12 +79,13 @@ def analyze():
         result = call_openai(
             (
                 "You are a fair technical interviewer. Score each rubric dimension "
-                "independently. Only criticize what is missing. Every strength needs "
-                "an exact quote from the transcript. Respond with valid JSON only."
+                "independently. Notes must match scores: max score = positive note, "
+                "zero score = what was missing. Never contradict yourself. "
+                "Respond with valid JSON only."
             ),
             build_analyze_prompt(problem, transcript, code),
         )
-        return jsonify(result)
+        return jsonify(normalize_feedback(result, transcript))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

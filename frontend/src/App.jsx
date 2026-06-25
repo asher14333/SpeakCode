@@ -11,7 +11,7 @@ You may assume that each input would have exactly one solution, and you may not 
 You can return the answer in any order.`,
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 function App() {
   const [transcript, setTranscript] = useState('')
@@ -21,6 +21,7 @@ function App() {
   const [error, setError] = useState(null)
   const [speechSupported, setSpeechSupported] = useState(true)
   const recognitionRef = useRef(null)
+  const sessionBaseRef = useRef('')
 
   useEffect(() => {
     const SpeechRecognition =
@@ -37,15 +38,11 @@ function App() {
     recognition.lang = 'en-US'
 
     recognition.onresult = (event) => {
-      let finalTranscript = ''
+      let sessionText = ''
       for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' '
-        }
+        sessionText += event.results[i][0].transcript
       }
-      if (finalTranscript) {
-        setTranscript((prev) => prev + finalTranscript)
-      }
+      setTranscript((sessionBaseRef.current + sessionText).trim())
     }
 
     recognition.onerror = (event) => {
@@ -65,6 +62,7 @@ function App() {
   const startRecording = () => {
     setError(null)
     setFeedback(null)
+    sessionBaseRef.current = transcript ? `${transcript} ` : ''
     try {
       recognitionRef.current?.start()
       setIsRecording(true)
@@ -92,10 +90,11 @@ function App() {
       const { data } = await axios.post(`${API_URL}/analyze`, { transcript })
       setFeedback(data)
     } catch (err) {
-      setError(
+      const message =
         err.response?.data?.error ||
-          'Failed to analyze. Make sure the backend is running and your API key is set.'
-      )
+        err.message ||
+        'Failed to analyze. Make sure the backend is running.'
+      setError(message)
     } finally {
       setIsAnalyzing(false)
     }
@@ -177,6 +176,9 @@ function App() {
         {feedback && (
           <section className="card feedback-card">
             <h2>AI Interview Feedback</h2>
+            <div className={`verdict ${feedback.passed ? 'verdict-pass' : 'verdict-fail'}`}>
+              {feedback.passed ? '✓ You passed!' : 'Keep practicing'}
+            </div>
             <div className="score">
               Score: <strong>{feedback.score}/10</strong>
             </div>

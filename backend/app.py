@@ -41,6 +41,7 @@ Evaluate:
 
 Return a JSON object with exactly these fields:
 - score: integer from 1 to 10
+- passed: boolean, true if score is 7 or higher and the explanation demonstrates real understanding of the problem
 - strengths: array of strings (each a specific strength)
 - improvements: array of strings (each a specific improvement)
 
@@ -86,4 +87,4 @@ def analyze():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host="127.0.0.1", port=5001)

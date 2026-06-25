@@ -30,7 +30,7 @@ cp .env.example .env
 python app.py
 ```
 
-Backend runs at `http://localhost:5000`.
+Backend runs at `http://127.0.0.1:5001`.
 
 ### Frontend
 
@@ -40,7 +40,9 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`.
+Frontend runs at `http://localhost:5173`. API requests are proxied to the backend automatically (avoids macOS port 5000 / AirPlay conflicts).
+
+> **Note:** macOS uses port 5000 for AirPlay Receiver. The backend uses port **5001** to avoid this.
 
 ## API
 

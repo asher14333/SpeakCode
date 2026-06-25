@@ -1,13 +1,14 @@
 # SpeakCode
 
-Voice-first AI coding interview coach. Practice explaining LeetCode solutions out loud and get feedback on your communication — not just your code.
+Voice-first AI coding interview coach. Practice explaining LeetCode solutions out loud, write code, run test cases, and get rubric-based feedback with interview follow-ups.
 
-## How it works
+## Features
 
-1. Read the **Two Sum** problem
-2. Click **Start Explanation** and speak your approach
-3. Review the transcript (edit if needed)
-4. Click **Analyze** to get AI interview feedback
+- **5 problems** — Two Sum, Valid Parentheses, Contains Duplicate, Best Time to Buy and Sell Stock, Maximum Subarray
+- **Monaco editor** — syntax highlighting, line numbers, LeetCode-style Run console
+- **Rubric scoring** — 6-dimension breakdown with quote-backed strengths
+- **Interview follow-up mode** — AI asks up to 3 probing follow-up questions
+- **Voice explanation** — Web Speech API with transcript review
 
 ## Prerequisites
 
@@ -23,10 +24,10 @@ Voice-first AI coding interview coach. Practice explaining LeetCode solutions ou
 ```bash
 cd backend
 python3 -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Add your OPENAI_API_KEY to .env
+# Add OPENAI_API_KEY to .env
 python app.py
 ```
 
@@ -40,32 +41,27 @@ npm install
 npm run dev
 ```
 
-Frontend runs at `http://localhost:5173`. API requests are proxied to the backend automatically (avoids macOS port 5000 / AirPlay conflicts).
-
-> **Note:** macOS uses port 5000 for AirPlay Receiver. The backend uses port **5001** to avoid this.
+Frontend runs at `http://localhost:5173`.
 
 ## API
 
-**POST /analyze**
+**GET /problems** — list available problems
 
-```json
-{
-  "transcript": "I would use a hashmap to store seen values..."
-}
-```
+**POST /run** — `{ "code": "...", "problemId": "two-sum" }`
 
-Response:
+**POST /analyze** — `{ "transcript": "...", "code": "...", "problemId": "two-sum" }`
 
-```json
-{
-  "score": 8,
-  "strengths": ["Explained brute force approach", "Mentioned time complexity"],
-  "improvements": ["Discuss space complexity", "Walk through an example"]
-}
-```
+Returns rubric breakdown, quote-backed strengths, and improvements.
 
-## Tech stack
+**POST /interview/start** — `{ "transcript": "...", "code": "...", "problemId": "two-sum" }`
 
-- **Frontend:** React, Vite, Web Speech API, Axios
-- **Backend:** Flask, OpenAI API
-- **AI:** GPT-4o-mini with structured JSON output
+**POST /interview/respond** — `{ "history": [...], "answer": "...", ... }`
+
+## Workflow
+
+1. Pick a problem from the dropdown
+2. Write your solution in the Monaco editor
+3. Click **Run** to test against cases
+4. Click **Start Explanation** and explain your approach
+5. Click **Analyze Interview** for rubric feedback
+6. Open **Interview** tab for follow-up questions

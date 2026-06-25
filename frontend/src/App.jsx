@@ -1,23 +1,48 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import axios from 'axios'
-import { problem } from './data/twoSum'
-import { handleEditorKeyDown } from './utils/editorKeys'
+import { problems, getProblemBySlug } from './data/problems'
+import CodeEditor from './components/CodeEditor'
+import RubricFeedback from './components/RubricFeedback'
+import TestConsole from './components/TestConsole'
+import InterviewPanel from './components/InterviewPanel'
 import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
 function App() {
+  const [problemSlug, setProblemSlug] = useState('two-sum')
+  const problem = getProblemBySlug(problemSlug)
+
   const [code, setCode] = useState(problem.starterCode)
   const [transcript, setTranscript] = useState('')
   const [activeTab, setActiveTab] = useState('code')
   const [isRecording, setIsRecording] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
+  const [runResults, setRunResults] = useState(null)
+  const [consoleTab, setConsoleTab] = useState('testcase')
+  const [selectedCase, setSelectedCase] = useState(0)
   const [feedback, setFeedback] = useState(null)
   const [error, setError] = useState(null)
   const [speechSupported, setSpeechSupported] = useState(true)
+  const [showProblemList, setShowProblemList] = useState(false)
+
   const recognitionRef = useRef(null)
   const sessionBaseRef = useRef('')
-  const codeEditorRef = useRef(null)
+
+  const switchProblem = useCallback((slug) => {
+    const next = getProblemBySlug(slug)
+    setProblemSlug(slug)
+    setCode(next.starterCode)
+    setTranscript('')
+    setFeedback(null)
+    setRunResults(null)
+    setConsoleTab('testcase')
+    setSelectedCase(0)
+    setActiveTab('code')
+    setError(null)
+    setShowProblemList(false)
+  }, [])
 
   useEffect(() => {
     const SpeechRecognition =
@@ -73,12 +98,43 @@ function App() {
     setIsRecording(false)
   }
 
+  const handleRun = async () => {
+    setIsRunning(true)
+    setError(null)
+    setRunResults(null)
+    setActiveTab('code')
+    setConsoleTab('result')
+
+    try {
+      const { data } = await axios.post(`${API_URL}/run`, {
+        code,
+        problemId: problemSlug,
+      })
+      if (data.error && !data.results) {
+        setError(data.error)
+        setRunResults({ error: data.error, results: [] })
+      } else {
+        setRunResults(data)
+        const firstFail = data.results?.findIndex((r) => !r.passed)
+        setSelectedCase(firstFail >= 0 ? firstFail : 0)
+      }
+    } catch (err) {
+      const message =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to run code. Make sure the backend is running.'
+      setError(message)
+      setRunResults({ error: message, results: [] })
+    } finally {
+      setIsRunning(false)
+    }
+  }
+
   const handleAnalyze = async () => {
     if (isRecording) {
       setError('Stop your explanation before analyzing.')
       return
     }
-
     if (!transcript.trim()) {
       setError('Please record or type your explanation first.')
       setActiveTab('explain')
@@ -93,15 +149,16 @@ function App() {
       const { data } = await axios.post(`${API_URL}/analyze`, {
         transcript,
         code,
+        problemId: problemSlug,
       })
       setFeedback(data)
       setActiveTab('feedback')
     } catch (err) {
-      const message =
+      setError(
         err.response?.data?.error ||
-        err.message ||
-        'Failed to analyze. Make sure the backend is running.'
-      setError(message)
+          err.message ||
+          'Failed to analyze. Make sure the backend is running.'
+      )
     } finally {
       setIsAnalyzing(false)
     }
@@ -113,9 +170,13 @@ function App() {
         <div className="topbar-left">
           <span className="logo">SpeakCode</span>
           <span className="topbar-divider" />
-          <span className="problem-nav">
+          <button
+            className="problem-picker-btn"
+            onClick={() => setShowProblemList((v) => !v)}
+          >
             {problem.id}. {problem.title}
-          </span>
+            <ChevronIcon />
+          </button>
         </div>
         <div className="topbar-actions">
           {!isRecording ? (
@@ -148,6 +209,27 @@ function App() {
           </button>
         </div>
       </header>
+
+      {showProblemList && (
+        <div className="problem-picker-overlay" onClick={() => setShowProblemList(false)}>
+          <div className="problem-picker" onClick={(e) => e.stopPropagation()}>
+            <h3>Problems</h3>
+            {problems.map((p) => (
+              <button
+                key={p.slug}
+                className={`problem-picker-item ${p.slug === problemSlug ? 'active' : ''}`}
+                onClick={() => switchProblem(p.slug)}
+              >
+                <span className="picker-id">{p.id}.</span>
+                <span className="picker-title">{p.title}</span>
+                <span className={`difficulty difficulty-${p.difficulty.toLowerCase()}`}>
+                  {p.difficulty}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="workspace">
         <aside className="problem-panel">
@@ -224,29 +306,51 @@ function App() {
                 Feedback
               </button>
             )}
+            <button
+              className={`tab ${activeTab === 'interview' ? 'tab-active' : ''}`}
+              onClick={() => setActiveTab('interview')}
+            >
+              Interview
+            </button>
           </div>
 
           <div className="panel-content">
             <div className={`code-pane ${activeTab !== 'code' ? 'pane-hidden' : ''}`}>
               <div className="code-toolbar">
                 <span className="lang-label">Python3</span>
-                <button
-                  className="btn-text"
-                  onClick={() => setCode(problem.starterCode)}
-                >
-                  Reset
-                </button>
+                <div className="code-toolbar-right">
+                  <button
+                    className="btn-text"
+                    onClick={() => {
+                      setCode(problem.starterCode)
+                      setRunResults(null)
+                      setConsoleTab('testcase')
+                    }}
+                  >
+                    Reset
+                  </button>
+                  <button
+                    className="btn-run-lc"
+                    onClick={handleRun}
+                    disabled={isRunning}
+                  >
+                    <PlayIcon />
+                    {isRunning ? 'Running…' : 'Run'}
+                  </button>
+                </div>
               </div>
-              <textarea
-                ref={codeEditorRef}
-                className="code-editor"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                onKeyDown={(e) => handleEditorKeyDown(e, code, setCode)}
-                spellCheck={false}
-                autoCapitalize="off"
-                autoComplete="off"
-                autoCorrect="off"
+
+              <div className="monaco-wrapper">
+                <CodeEditor value={code} onChange={setCode} />
+              </div>
+
+              <TestConsole
+                problem={problem}
+                consoleTab={consoleTab}
+                setConsoleTab={setConsoleTab}
+                selectedCase={selectedCase}
+                setSelectedCase={setSelectedCase}
+                runResults={runResults}
               />
             </div>
 
@@ -257,7 +361,6 @@ function App() {
                   your explanation below.
                 </p>
               )}
-
               <textarea
                 className="transcript-editor"
                 value={transcript}
@@ -268,53 +371,33 @@ function App() {
             </div>
 
             <div className={`feedback-pane ${activeTab !== 'feedback' || !feedback ? 'pane-hidden' : ''}`}>
-              {feedback && (
-                <>
-                <div
-                  className={`verdict ${feedback.passed ? 'verdict-pass' : 'verdict-fail'}`}
-                >
-                  {feedback.passed ? '✓ You passed!' : 'Keep practicing'}
-                </div>
+              <RubricFeedback feedback={feedback} />
+            </div>
 
-                <div className="score-row">
-                  <span className="score-label">Communication Score</span>
-                  <span className="score-value">{feedback.score}/10</span>
-                </div>
-
-                {feedback.strengths?.length > 0 && (
-                  <div className="feedback-block">
-                    <h3>Strengths</h3>
-                    <ul className="strengths">
-                      {feedback.strengths.map((item, i) => (
-                        <li key={i}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {feedback.improvements?.length > 0 && (
-                  <div className="feedback-block">
-                    <h3>Improvements</h3>
-                    <ul className="improvements">
-                      {feedback.improvements.map((item, i) => (
-                        <li key={i}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                </>
-              )}
+            <div className={`interview-pane-wrapper ${activeTab !== 'interview' ? 'pane-hidden' : ''}`}>
+              <InterviewPanel
+                key={problemSlug}
+                problemId={problemSlug}
+                transcript={transcript}
+                code={code}
+                speechSupported={speechSupported}
+                onError={setError}
+              />
             </div>
           </div>
 
-          {error && (
-            <div className="error-banner">
-              {error}
-            </div>
-          )}
+          {error && <div className="error-banner">{error}</div>}
         </main>
       </div>
     </div>
+  )
+}
+
+function PlayIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M8 5v14l11-7z" />
+    </svg>
   )
 }
 
@@ -331,6 +414,14 @@ function StopIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
       <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
+  )
+}
+
+function ChevronIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7 10l5 5 5-5z" />
     </svg>
   )
 }
